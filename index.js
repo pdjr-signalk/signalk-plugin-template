@@ -16,7 +16,6 @@
 
 const bonjour = require('bonjour')();
 
-
 const Log = require("./lib/signalk-liblog/Log.js");
 //const Delta = require("./lib/signalk-libdelta/Delta.js");
 //const Notification = require("./lib/signalk-libnotification/Notification.js");
@@ -46,41 +45,20 @@ module.exports = function (app) {
   const log = new Log(plugin.id, { ncallback: app.setPluginStatus, ecallback: app.setPluginError });
   
   plugin.start = function(options, restartPlugin) {
-    var serverAddress = null;
+    const serverUuid = app.getSelfPath('uuid');
 
     plugin.options = { services: { webpush: { } } };
     app.debug("using configuration: %s", JSON.stringify(plugin.options, null, 2));
 
-    bonjour.find({ type: 'http' }, (service) => {      // look for local server on HTTPS
-      if ((service.addresses.includes("127.0.0.1")) && (service.txt.swname == "signalk-server")) {
-        serverAddress = "https://127.0.0.1:" + service.port;
-      }
-    });
-
-    setTimeout(() => {                                  // wait for 5 seconds, then...
-      bonjour.destroy();                                // destroy existing bonjour instance
-      if (serverAddress == null) {                      // if we didn't find HTTPS
-        if (plugin.options.services.webpush) {          // we can't support web-push...
+    findServerAddress(app.getSelfPath('uuid')).then((serverAddress) => {
+      console.log(serverAddress);
+      if (serverAddress) {
+        if ((plugin.options.services.webpush) && (!serverAddress.startsWith('https:'))) {
           log.W("disabling web-push service (server not running SSL)");
           delete plugin.options.services.webpush;
         }
-        bonjour.find({ type: "https" }, (service) => {   // and we should look for local server on HTTP
-          if ((service.addresses.includes("127.0.0.1")) && (service.txt.swname == "signalk-server")) {
-            serverAddress = "http://127.0.0.1:" + service.port;
-          }
-        });
-        setTimeout(() => {                              // wait for 5 seconds, then...
-          bonjour.destroy();                            // destroy bonjour instance
-          if (serverAddress == null) {
-            log.W("can't find server");
-          } else {
-            console.log("Got address %s", serverAddress); // start plugin service
-          }
-        }, 10000);    
-      } else {
-        console.log("Got address %s", serverAddress); // start plugin service
       }
-    }, 5000);
+    });
   }
 
   plugin.stop = function() {
@@ -95,8 +73,29 @@ module.exports = function (app) {
   //  require("./resources/openApi.json");
   //}
 
-  function startNotificationService(serverAddress) {
-    console.log(serverAddress);
+  async function findServerAddress(uuid, timeout=5) {
+    var serverAddress = null;
+    return(await new Promise((resolve, reject) => {
+      bonjour.find({ type: 'https' }, (service) => {
+        if (service.txt.self === uuid) serverAddress = "https://" + service.addresses[0] + ":" + service.port;
+      });
+  
+      setTimeout(() => {                                  // wait for 5 seconds, then...
+        if (serverAddress != null) {
+          resolve(serverAddress);
+        } else {
+          bonjour.find({ type: "http" }, (service) => {
+            if (service.txt.self === uuid) serverAddress = "http://" + service.addresses[0] + ":" + service.port;
+          });
+          setTimeout(() => {                              // wait for 5 seconds, then...
+            bonjour.destroy();
+            resolve(serverAddress);                            // destroy bonjour instance
+          }, timeout * 1000);    
+        }
+      }, (timeout * 1000));
+    }).then(() => {
+      return(serverAddress);
+    }));
   }
 
   /********************************************************************
