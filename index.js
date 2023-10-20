@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+const bonjour = require('bonjour')();
+
+
 const Log = require("./lib/signalk-liblog/Log.js");
 //const Delta = require("./lib/signalk-libdelta/Delta.js");
 //const Notification = require("./lib/signalk-libnotification/Notification.js");
@@ -30,6 +33,7 @@ const PLUGIN_SCHEMA = {
 const PLUGIN_UISCHEMA = {};
 
 module.exports = function (app) {
+
   var plugin = {};
   var unsubscribes = [];
 
@@ -42,9 +46,41 @@ module.exports = function (app) {
   const log = new Log(plugin.id, { ncallback: app.setPluginStatus, ecallback: app.setPluginError });
   
   plugin.start = function(options, restartPlugin) {
+    var serverAddress = null;
 
-    plugin.options = options;
+    plugin.options = { services: { webpush: { } } };
     app.debug("using configuration: %s", JSON.stringify(plugin.options, null, 2));
+
+    bonjour.find({ type: 'http' }, (service) => {      // look for local server on HTTPS
+      if ((service.addresses.includes("127.0.0.1")) && (service.txt.swname == "signalk-server")) {
+        serverAddress = "https://127.0.0.1:" + service.port;
+      }
+    });
+
+    setTimeout(() => {                                  // wait for 5 seconds, then...
+      bonjour.destroy();                                // destroy existing bonjour instance
+      if (serverAddress == null) {                      // if we didn't find HTTPS
+        if (plugin.options.services.webpush) {          // we can't support web-push...
+          log.W("disabling web-push service (server not running SSL)");
+          delete plugin.options.services.webpush;
+        }
+        bonjour.find({ type: "https" }, (service) => {   // and we should look for local server on HTTP
+          if ((service.addresses.includes("127.0.0.1")) && (service.txt.swname == "signalk-server")) {
+            serverAddress = "http://127.0.0.1:" + service.port;
+          }
+        });
+        setTimeout(() => {                              // wait for 5 seconds, then...
+          bonjour.destroy();                            // destroy bonjour instance
+          if (serverAddress == null) {
+            log.W("can't find server");
+          } else {
+            console.log("Got address %s", serverAddress); // start plugin service
+          }
+        }, 10000);    
+      } else {
+        console.log("Got address %s", serverAddress); // start plugin service
+      }
+    }, 5000);
   }
 
   plugin.stop = function() {
@@ -58,6 +94,10 @@ module.exports = function (app) {
   //plugin.getOpenApi = function() {
   //  require("./resources/openApi.json");
   //}
+
+  function startNotificationService(serverAddress) {
+    console.log(serverAddress);
+  }
 
   /********************************************************************
    * EXPRESS ROUTE HANDLING
@@ -79,6 +119,7 @@ module.exports = function (app) {
       return(false);
     }
   }
+  */
 
   return(plugin);
 }
