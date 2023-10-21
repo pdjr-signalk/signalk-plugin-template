@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-const App = require('./lib/signalk-libapp/App.js');
-const Log = require("./lib/signalk-liblog/Log.js");
+//const App = require('./lib/signalk-libapp/App.js');
+const Log = require('signalk-liblog');
 //const Delta = require("./lib/signalk-libdelta/Delta.js");
 //const Notification = require("./lib/signalk-libnotification/Notification.js");
 
