@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-//const App = require('./lib/signalk-libapp/App.js');
-const Log = require('signalk-liblog');
+const myApp = require('./lib/signalk-libapp/App.js');
+const Log = require('./lib/signalk-liblog/Log.js');
 //const Delta = require("./lib/signalk-libdelta/Delta.js");
 //const Notification = require("./lib/signalk-libnotification/Notification.js");
 
@@ -40,7 +40,7 @@ module.exports = function (app) {
   plugin.schema = PLUGIN_SCHEMA;
   plugin.uiSchema = PLUGIN_UISCHEMA;
 
-  const App = new App(app);
+  const App = new myApp(app);
   const log = new Log(plugin.id, { ncallback: app.setPluginStatus, ecallback: app.setPluginError });
   
   plugin.start = function(options, restartPlugin) {
