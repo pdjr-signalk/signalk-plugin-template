@@ -14,12 +14,10 @@
  * limitations under the License.
  */
 
-const bonjour = require('bonjour')();
-
+const App = require('../lib/signalk-libapp/App.js');
 const Log = require("./lib/signalk-liblog/Log.js");
 //const Delta = require("./lib/signalk-libdelta/Delta.js");
 //const Notification = require("./lib/signalk-libnotification/Notification.js");
-//const App = require('./lib/signalk-libapp/App.js');
 
 const PLUGIN_ID = "test";
 const PLUGIN_NAME = "Test";
@@ -42,25 +40,23 @@ module.exports = function (app) {
   plugin.schema = PLUGIN_SCHEMA;
   plugin.uiSchema = PLUGIN_UISCHEMA;
 
+  const App = new App(app);
   const log = new Log(plugin.id, { ncallback: app.setPluginStatus, ecallback: app.setPluginError });
   
   plugin.start = function(options, restartPlugin) {
-    const serverUuid = app.getSelfPath('uuid');
+    process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
 
     plugin.options = { services: { webpush: { } } };
     app.debug("using configuration: %s", JSON.stringify(plugin.options, null, 2));
 
-    findServerAddress(app.getSelfPath('uuid')).then((serverAddress) => {
+    App.findServerAddress(app.getSelfPath('uuid')).then((serverAddress) => {
       console.log(serverAddress);
-      if (serverAddress) {
-        if ((plugin.options.services.webpush) && (!serverAddress.startsWith('https:'))) {
-          log.W("disabling web-push service (server not running SSL)");
-          delete plugin.options.services.webpush;
-        }
-      }
-    });
+      App.getApiVersion(serverAddress).then((apiVersion) => {
+        console.log(apiVersion);
+      })
+    })
   }
-
+  
   plugin.stop = function() {
     unsubscribes.forEach(f => f());
     unsubscribes = [];
@@ -72,31 +68,6 @@ module.exports = function (app) {
   //plugin.getOpenApi = function() {
   //  require("./resources/openApi.json");
   //}
-
-  async function findServerAddress(uuid, timeout=5) {
-    var serverAddress = null;
-    return(await new Promise((resolve, reject) => {
-      bonjour.find({ type: 'https' }, (service) => {
-        if (service.txt.self === uuid) serverAddress = "https://" + service.addresses[0] + ":" + service.port;
-      });
-  
-      setTimeout(() => {                                  // wait for 5 seconds, then...
-        if (serverAddress != null) {
-          resolve(serverAddress);
-        } else {
-          bonjour.find({ type: "http" }, (service) => {
-            if (service.txt.self === uuid) serverAddress = "http://" + service.addresses[0] + ":" + service.port;
-          });
-          setTimeout(() => {                              // wait for 5 seconds, then...
-            bonjour.destroy();
-            resolve(serverAddress);                            // destroy bonjour instance
-          }, timeout * 1000);    
-        }
-      }, (timeout * 1000));
-    }).then(() => {
-      return(serverAddress);
-    }));
-  }
 
   /********************************************************************
    * EXPRESS ROUTE HANDLING
