@@ -53,6 +53,9 @@ module.exports = function (app) {
       console.log(serverAddress);
       App.getApiVersion(serverAddress).then((apiVersion) => {
         console.log(apiVersion);
+        App.getAuthenticationToken(serverAddress, apiVersion, "push-notifier", "samsam").then((token) => {
+          console.log(token);
+        })
       })
     })
   }
