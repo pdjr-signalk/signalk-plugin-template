@@ -51,7 +51,8 @@ module.exports = function (app) {
 
     App.findServerAddress(app.getSelfPath('uuid')).then((serverAddress) => {
       console.log(serverAddress);
-      App.getApiVersion(serverAddress).then((apiVersion) => {
+      App.getEndpoints(serverAddress).then((endpoints) => {
+        const apiVersion = Object.keys(endpoints.endpoints)[0];
         console.log(apiVersion);
         App.getAuthenticationToken(serverAddress, apiVersion, "push-notifier", "samsam").then((token) => {
           console.log(token);
