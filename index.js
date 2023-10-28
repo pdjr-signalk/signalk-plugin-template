@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-const myApp = require('./lib/signalk-libapp/App.js');
-const Log = require('./lib/signalk-liblog/Log.js');
+const HttpInterface = require('./lib/signalk-libhttpinterface/HttpInterface.js');
+//const Log = require('./lib/signalk-liblog/Log.js');
 //const Delta = require("./lib/signalk-libdelta/Delta.js");
 //const Notification = require("./lib/signalk-libnotification/Notification.js");
 
@@ -40,25 +40,12 @@ module.exports = function (app) {
   plugin.schema = PLUGIN_SCHEMA;
   plugin.uiSchema = PLUGIN_UISCHEMA;
 
-  const App = new myApp(app);
-  const log = new Log(plugin.id, { ncallback: app.setPluginStatus, ecallback: app.setPluginError });
-  
-  plugin.start = function(options, restartPlugin) {
-    process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
+  plugin.start = function(options) {
+    const httpInterface = new HttpInterface(app.getSelfPath('uuid'));
 
-    plugin.options = { services: { webpush: { } } };
-    app.debug("using configuration: %s", JSON.stringify(plugin.options, null, 2));
-
-    App.findServerAddress(app.getSelfPath('uuid')).then((serverAddress) => {
-      console.log(serverAddress);
-      App.getEndpoints(serverAddress).then((endpoints) => {
-        const apiVersion = Object.keys(endpoints.endpoints)[0];
-        console.log(apiVersion);
-        App.getAuthenticationToken(serverAddress, apiVersion, "push-notifier", "samsam").then((token) => {
-          console.log(token);
-        })
-      })
-    })
+    console.log(httpInterface.getServerAddress());
+    console.log(httpInterface.getServerInfo());
+    console.log(httpInterface.getAuthenticationToken());
   }
   
   plugin.stop = function() {
