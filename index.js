@@ -41,11 +41,22 @@ module.exports = function (app) {
   plugin.uiSchema = PLUGIN_UISCHEMA;
 
   plugin.start = function(options) {
-    const httpInterface = new HttpInterface(app.getSelfPath('uuid'));
-
-    console.log(httpInterface.getServerAddress());
-    console.log(httpInterface.getServerInfo());
-    console.log(httpInterface.getAuthenticationToken());
+    setTimeout(()=>{
+      const httpInterface = new HttpInterface(app.getSelfPath('uuid'));
+    
+      var serverAddress;
+      httpInterface.getServerAddress().then((serverAddress) => {
+        console.log(serverAddress);
+        var serverInfo;
+        httpInterface.getServerInfo().then((serverInfo) => {
+          console.log(JSON.stringify(serverInfo));
+          var token;
+          httpInterface.getAuthenticationToken((token) => {
+            console.log(token);
+          });
+        });
+      });  
+    }, 2000);
   }
   
   plugin.stop = function() {
