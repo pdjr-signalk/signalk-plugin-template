@@ -41,9 +41,11 @@ module.exports = function (app) {
   plugin.uiSchema = PLUGIN_UISCHEMA;
 
   plugin.start = function(options) {
-    setTimeout(()=>{
-      const httpInterface = new HttpInterface(app.getSelfPath('uuid'));
-    
+
+    process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
+    const httpInterface = new HttpInterface(app.getPath('uuid'));
+
+    try {
       var serverAddress;
       httpInterface.getServerAddress().then((serverAddress) => {
         console.log(serverAddress);
@@ -56,7 +58,7 @@ module.exports = function (app) {
           });
         });
       });  
-    }, 2000);
+    } catch(e) { console.log(e.message); }
   }
   
   plugin.stop = function() {
