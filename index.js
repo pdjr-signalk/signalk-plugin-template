@@ -43,7 +43,8 @@ module.exports = function (app) {
   plugin.start = function(options) {
 
     process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
-    const httpInterface = new HttpInterface(app.getPath('uuid'));
+
+    const httpInterface = new HttpInterface(app.getSelfPath('uuid'));
 
     try {
       var serverAddress;
@@ -53,7 +54,7 @@ module.exports = function (app) {
         httpInterface.getServerInfo().then((serverInfo) => {
           console.log(JSON.stringify(serverInfo));
           var token;
-          httpInterface.getAuthenticationToken((token) => {
+          httpInterface.getAuthenticationToken('push-notifier','samsam').then((token) => {
             console.log(token);
           });
         });
